@@ -1,1 +1,1 @@
-
+Epilepsy dataset is collected from UCR Time-series dataset archive and is available here: [https://www.timeseriesclassification.com/description.php?Dataset=Epilepsy](https://www.timeseriesclassification.com/description.php?Dataset=Epilepsy)
