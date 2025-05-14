@@ -1,1 +1,1 @@
-
+This is the UCR WalkingSittingStanding Time-series dataset available on: [https://www.timeseriesclassification.com/description.php?Dataset=WalkingSittingStanding](https://www.timeseriesclassification.com/description.php?Dataset=WalkingSittingStanding)
