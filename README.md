@@ -31,4 +31,4 @@ pip install -r requirements.txt
 Run the notebook `Quick Demo/Step1_GNet_Training.ipynb` to train the GNet model on MNIST. This will save the trained parameters to disk.
 
 ### 4. Inference with EHDG-Net
-Run the notebook `Quick Demo/Step2_EHDGNet.ipynb` to to do the inference using the Embedded High-Dimensional GNet. 
+Run the notebook `Quick Demo/Step2_EHDGNet.ipynb` to perform the inference using the Embedded High-Dimensional GNet. 
