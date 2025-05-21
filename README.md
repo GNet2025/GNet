@@ -9,8 +9,8 @@ This repository contains the code and experiments for our paper **"G-Net: A Prov
 - `Quick Demo/Step1_GNet_Training.ipynb`: Trains the base GNet model on MNIST.
 - `Quick Demo/Step2_EHDGNet.ipynb`: Loads the trained GNet and performs inference using its EHD representation.
 - `requirements.txt`: Lists all required Python packages.
-- `Comparison With Other HDC Methods/`: Contains the experiments for comparing EHDGNet with other Hyperdimensional Computing Methods.
-- `RASU vs. TASU/`: Contains the experiments for comparing Gaussian and Rademacher RASU with Gaussian and Rademacher TASU frameworks in EHDGNet.
+- `Comparison With Other HDC Methods/`: Contains the experiments for comparing EHDG-Net with other Hyperdimensional Computing Methods.
+- `RASU vs. TASU/`: Contains the experiments for comparing Gaussian and Rademacher RASU with Gaussian and Rademacher TASU frameworks in EHDG-Net.
 - `Robustness Experiments`: Contains the experiments for checking the robustness of RASU vs TASU and a comparison with other HDC methods under bit flip perturbations from 0% to 50%. 
 
 ---
@@ -30,5 +30,5 @@ pip install -r requirements.txt
 ### 3. Training the GNet
 Run the notebook `Quick Demo/Step1_GNet_Training.ipynb` to train the GNet model on MNIST. This will save the trained parameters to disk.
 
-### 4. Inference with EHDGNet
+### 4. Inference with EHDG-Net
 Run the notebook `Quick Demo/Step2_EHDGNet.ipynb` to to do the inference using the Embedded High-Dimensional GNet. 
