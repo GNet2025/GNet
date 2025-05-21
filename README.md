@@ -19,5 +19,13 @@ This repository contains the code and experiments for our paper **"G-Net: A Prov
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/GNet2025/GNet.git
+cd GNet
+```
+### 2. Install Dependencies
+```
+pip install -r requirements.txt
+```
+
+### 3. Training the GNet
+Run the notebook `Step1_GNet_Training.ipynb` to train the GNet model. This will save the trained parameters to disk.
