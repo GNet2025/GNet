@@ -1,0 +1,209 @@
+import torch
+import torchvision
+import torchvision.transforms as transforms
+import PIL
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+import torch.optim as optim
+from torch.func import vmap  
+
+class ConvBN(nn.Module):
+    def __init__(self, 
+                 in_channels, 
+                 out_channels, 
+                 kernel_size,
+                 stride: int = 1,
+                 padding: int = 2,
+                 eps: float=1e-4,
+                 q: float=1e-4,
+                 initial: bool=True,
+                 mean = 0,
+                 std = 1,
+                 seed = 13,
+                 bias_par_init = 0.001):
+        super().__init__()
+
+        self.eps = eps
+        self.q = q
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.conv = nn.Conv2d(in_channels=self.in_channels, 
+                              out_channels=self.out_channels,
+                              kernel_size=self.kernel_size,
+                              stride=self.stride,
+                              padding=self.padding,
+                              bias=False)
+
+        self.bias_trick_par = nn.Parameter(torch.tensor(bias_par_init))
+        
+        self.bn = nn.BatchNorm2d(self.out_channels, eps=self.eps)
+        self.bn.bias.data.zero_()
+        self.bn.bias.requires_grad = False
+        
+        kernel_shape = (1, self.in_channels, self.kernel_size, self.kernel_size)
+        self.register_buffer('norm_filter', torch.ones(kernel_shape))
+        
+        nn.init.normal_(self.conv.weight, mean=0.0, std=std)
+        nn.init.normal_(self.bn.weight, mean=0.0, std=0.05)
+
+        self.seed = seed
+
+    def custom_round(self, n):
+        remainder = n % 1000
+        base = n - remainder
+        if remainder >= 101:
+            return base + 1000
+        elif remainder <= 100:
+            return base
+
+    def forward(self, x):
+        
+        x = x + (self.bias_trick_par)
+
+        xp = F.pad(x, (self.padding, self.padding, self.padding, self.padding), value=0)
+        normxp = F.conv2d(xp.square(), self.norm_filter, stride=self.stride, padding=0)
+        normxp = (normxp + self.eps).sqrt() + self.eps
+        normxp = normxp.expand(-1, self.out_channels, -1, -1)
+        
+        x = self.conv(x)
+        temp = x
+        x = self.bn(x)
+
+        if self.training:
+            batch_mean = temp.mean(dim=(0, 2, 3))
+            batch_var = temp.var(dim=(0, 2, 3), unbiased=False)
+        else: 
+            batch_mean = self.bn.running_mean
+            batch_var = self.bn.running_var
+
+        slope = self.bn.weight / torch.sqrt(batch_var + self.eps)
+        w_aug = self.conv.weight * slope.view(-1, 1, 1, 1)
+
+        normw = torch.sum(w_aug.square(), dim=(1,2,3))
+        normw = torch.sqrt(normw + self.eps)
+        normw = normw.view(1, -1, 1, 1)
+
+        # print(x.shape, batch_mean.shape, slope.shape)
+
+        x = x + (slope * batch_mean).view(1, -1, 1, 1) # To remove the excess bias coming from batch mean
+        
+        x = x * (1 / normxp) * (1 / normw)
+        x = torch.asin(x)
+            
+        return x     
+
+    @torch.no_grad()             # no autograd graph
+    def flip_sign_(self, tensor: torch.Tensor, percentage: float) -> torch.Tensor:
+        """
+        Flip the sign of a random subset of elements *in place*.
+    
+        Args:
+            tensor (torch.Tensor): Any shape, modified in place.
+            percentage (float): 0‒1 fraction of elements to flip.
+    
+        Returns:
+            torch.Tensor: The same tensor object (for chaining).
+        """
+        if percentage <= 0.0:
+            return tensor
+        if percentage >= 1.0:
+            tensor.mul_(-1)
+            return tensor                    # all elements flipped
+    
+        numel = tensor.numel()
+        num_to_flip = int(numel * percentage)
+        if num_to_flip == 0:
+            return tensor
+    
+        flat = tensor.view(-1)               # view ↔ no copy
+        idx = torch.randint(0, numel, (num_to_flip,),
+                            device=flat.device)
+        flat[idx] *= -1                      # in-place sign change
+        return tensor
+
+
+    def init_hdc(self, ratio, seed, flip_perc=None):
+        try:
+            del self.alphag1
+            del self.g
+            del self.alpha1
+
+        except UnboundLocalError:
+            pass  # If 'g' was not defined, do nothing
+        except AttributeError:
+            pass  # Do nothing if the attribute does not exist
+
+        slope = self.bn.weight / torch.sqrt(self.bn.running_var + self.eps)
+        w_bn = self.conv.weight * slope.view(-1, 1, 1, 1)
+        w_bn = w_bn.unsqueeze(0)
+
+        n = w_bn.shape[1:].numel()
+        self.nHDC = int(self.custom_round(ratio * n)) if ratio<1000 else int(ratio)
+
+        torch.manual_seed(seed)
+        self.g = torch.randn(self.nHDC, *w_bn.shape[1:], device=w_bn.device, dtype=w_bn.dtype)
+        self.alpha1 = torch.sign((w_bn * self.g).sum(dim=(2, 3, 4), keepdim=True))
+        if flip_perc is not None and flip_perc > 0.0:
+           self.flip_sign_(self.alpha1, flip_perc)
+        
+        temp = (self.alpha1 * self.g)
+        self.size = temp.shape
+        self.alphag1 = temp.view(-1, *w_bn.shape[2:])
+
+
+    def hdc(self, x):
+        B, C, H, W = x.shape
+
+        x = x + self.bias_trick_par
+        x_p = F.pad(x, (self.padding, self.padding, self.padding, self.padding), value=0)
+        
+        out = nn.functional.conv2d(x_p, self.alphag1, stride=self.stride, padding=0)
+        out = out.view(B, self.size[0], self.size[1], out.size(2), out.size(3))
+        
+        zhat = (torch.pi / (2 * self.nHDC)) * torch.sign(out).sum(dim=1)
+        return zhat
+
+    def apply_one(self, x_p, weight):
+        return F.conv2d(x_p, weight, padding=0)
+
+    def init_hdc2(self, ratio, seed, flip_perc=None):
+        
+        try:
+            del self.alpha1
+            del self.g
+
+        except UnboundLocalError:
+            pass  # If 'g' was not defined, do nothing
+        except AttributeError:
+            pass  # Do nothing if the attribute does not exist
+
+        slope = self.bn.weight / torch.sqrt(self.bn.running_var + self.eps)
+        w_bn = self.conv.weight * slope.view(-1, 1, 1, 1)
+        w_bn = w_bn.unsqueeze(0)
+
+        n = w_bn.shape[1:].numel()
+        self.nHDC = int(self.custom_round(ratio * n)) if ratio<1000 else int(ratio)
+
+        torch.manual_seed(seed)
+        self.g = torch.randn(self.nHDC, *w_bn.shape[1:], device=w_bn.device, dtype=w_bn.dtype)
+        self.alpha1 = torch.sign((w_bn * self.g).sum(dim=(2, 3, 4), keepdim=True))
+
+    def hdc2(self, x, flip_perc=None):
+        B, C, H, W = x.shape
+
+        x = x + self.bias_trick_par
+        x_p = F.pad(x, (self.padding, self.padding, self.padding, self.padding), value=0)
+        gx = torch.sign(vmap(self.apply_one, in_dims=(None, 0))(x_p, self.g))
+
+        if flip_perc is not None and flip_perc > 0.0: 
+            self.flip_sign_(gx, flip_perc)
+        
+        out = (gx.transpose(1, 2) * self.alpha1)
+        zhat = out.sum(dim=0) * (torch.pi / (2 * self.nHDC))
+        zhat = zhat.transpose(0, 1)
+
+        return zhat
