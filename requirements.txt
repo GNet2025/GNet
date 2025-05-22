@@ -3,4 +3,5 @@ torchvision==0.20.1
 tqdm==4.67.1
 numpy==1.26.3
 aeon==1.1.0
+scikit-learn==1.6.0
 -f https://download.pytorch.org/whl/torch_stable.html
