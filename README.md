@@ -4,7 +4,7 @@ This repository contains the code and experiments for our paper **"G-Net: A Prov
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 - `Quick Demo/Step1_GNet_Training.ipynb`: Trains the base GNet model on MNIST.
 - `Quick Demo/Step2_EHDGNet.ipynb`: Loads the trained GNet and performs inference using its EHD representation.
@@ -15,7 +15,7 @@ This repository contains the code and experiments for our paper **"G-Net: A Prov
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 ```bash
