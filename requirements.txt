@@ -4,4 +4,5 @@ tqdm==4.67.1
 numpy==1.26.3
 aeon==1.1.0
 scikit-learn==1.6.0
+matplotlib==3.9.4
 -f https://download.pytorch.org/whl/torch_stable.html
