@@ -1,9 +1,9 @@
 # G-Net
 
 This repository contains the code and experiments for our paper **"G-Net: A Provably Easy Construction of High-Accuracy Random Binary Neural Networks"**, which introduces a two-step approach using G-Net and its Embedded High-Dimensional Representation EHDG-Net.
+---
 The experiments and implementation in this repository were developed by [Saeid Pourmand](https://github.com/pourmands).
 ---
-
 ## Project Structure
 
 - `Quick Demo/Step1_GNet_Training.ipynb`: Trains the base G-Net model on MNIST.
