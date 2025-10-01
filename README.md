@@ -2,7 +2,7 @@
 
 This repository contains the code and experiments for our paper **"G-Net: A Provably Easy Construction of High-Accuracy Random Binary Neural Networks"**, which introduces a two-step approach using G-Net and its Embedded High-Dimensional Representation EHDG-Net.
 ---
-<sub>The experiments and implementation in this repository were developed by <a href="https://github.com/pourmands">Saeid Pourmand</a>.</sub>
+<!-- <sub>The experiments and implementation in this repository were developed by <a href="https://github.com/pourmands">Saeid Pourmand</a>.</sub> -->
 ---
 ## Project Structure
 
